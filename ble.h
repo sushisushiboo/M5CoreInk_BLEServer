@@ -2,12 +2,13 @@
 #include <BLEUtils.h>
 #include <BLEServer.h>
 #include <BLE2902.h>
+#include <Preferences.h>
 
 #define BLE_MESSAEG_SIZE_MAX 65
 
 class ble: public BLECharacteristicCallbacks, public BLEServerCallbacks {
 public:
-  ble(bool notify = false);
+  ble(Preferences* pref, bool notify = false);
   ~ble();
 
   void onConnect(BLEServer* pServer);
@@ -22,8 +23,7 @@ public:
   void notify(const char* message);
 
 private:
-  BLEServer* pServer = NULL;
-  BLECharacteristic* pCharacteristic = NULL;
+  BLECharacteristic* m_pCharacteristic = NULL;
   char message[BLE_MESSAEG_SIZE_MAX];
   bool messageReceived = false;
   bool connected = false;

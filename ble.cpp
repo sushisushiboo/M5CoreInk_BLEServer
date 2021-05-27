@@ -6,7 +6,22 @@
 #define SERVICE_UUID_NOTIFY "332451cb-ad46-4410-a1ae-b5e3f166ff1b"
 #define CHARACTERISTIC_UUID "b6727492-b2ff-4563-aa2c-90c08e1bf879"
 
-ble::ble(bool notify) {
+#define SERVICE_UUID_BATTERY "180f"
+#define CHARACTERISTIC_UUID_BATTERYLEVEL "2a19"
+
+class BLECharacteristicCallbacksBatteryLevel: public BLECharacteristicCallbacks {
+  void onRead(BLECharacteristic *pCharacteristic) {
+    Serial.println("#read battery level");
+    float voltage, rate;
+    getBattery(&voltage, &rate);
+    int value = (int)rate;
+    pCharacteristic->setValue(value);
+  }
+};
+
+ble::ble(Preferences* pref, bool notify) {
+  sprintf(message, "%s", pref->getString("message").c_str());
+  
   Serial.print("BLE start.");
   if (notify) {
     Serial.println("(notify mode)");
@@ -22,17 +37,28 @@ ble::ble(bool notify) {
   } else {
     pService = pServer->createService(SERVICE_UUID);
   }
-  pCharacteristic = pService->createCharacteristic(
+  m_pCharacteristic = pService->createCharacteristic(
                                          CHARACTERISTIC_UUID,
                                          BLECharacteristic::PROPERTY_READ |
                                          BLECharacteristic::PROPERTY_WRITE |
                                          BLECharacteristic::PROPERTY_NOTIFY |
                                          BLECharacteristic::PROPERTY_INDICATE
                                        );
-  pCharacteristic->setCallbacks(this);
-  pCharacteristic->addDescriptor(new BLE2902());
-
+  m_pCharacteristic->setCallbacks(this);
+  m_pCharacteristic->addDescriptor(new BLE2902());
   pService->start();
+
+  // バッテリーサービス
+  BLEService* pServiceBattery = pServer->createService(SERVICE_UUID_BATTERY); // battery service
+  BLECharacteristic* pCharacteristicBattery = 
+    pServiceBattery->createCharacteristic(
+      CHARACTERISTIC_UUID_BATTERYLEVEL, // Battery Level
+      BLECharacteristic::PROPERTY_READ |
+      BLECharacteristic::PROPERTY_NOTIFY);    
+  pCharacteristicBattery->setCallbacks(new BLECharacteristicCallbacksBatteryLevel());
+  pCharacteristicBattery->addDescriptor(new BLE2902());
+  pServiceBattery->start();
+
   BLEAdvertising *pAdvertising = pServer->getAdvertising();
   pAdvertising->addServiceUUID(SERVICE_UUID);
   pAdvertising->start();
@@ -54,7 +80,7 @@ void ble::onDisconnect(BLEServer* pServer) {
 
 void ble::onRead(BLECharacteristic *pCharacteristic) {
   Serial.println("#read");
-  pCharacteristic->setValue("Hello World!"); 
+  pCharacteristic->setValue(message); 
 }
 
 void ble::onWrite(BLECharacteristic *pCharacteristic) {
@@ -93,7 +119,7 @@ bool ble::isConnected() {
 
 void ble::notify(const char* message) {
   if (connected) {
-    pCharacteristic->setValue(message);
-    pCharacteristic->notify();
+    m_pCharacteristic->setValue(message);
+    m_pCharacteristic->notify();
   }
 }

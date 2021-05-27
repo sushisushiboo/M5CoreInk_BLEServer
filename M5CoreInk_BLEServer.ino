@@ -164,7 +164,7 @@ void setup() {
     // Change BLE Service to Notify
     notify = true;
   }
-  myBle = new ble(notify);
+  myBle = new ble(&preferences, notify);
 
   updateDisplay(false, notify);
 
