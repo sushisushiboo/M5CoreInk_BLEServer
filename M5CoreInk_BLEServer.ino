@@ -13,7 +13,7 @@
 
 #define TIME_ACTIVE_MSEC 1 * 1000 // 動作時間
 #define TIME_ACTIVE_NOTIFY_MSEC 60 * 1000 // 通知時の動作時間
-#define TIME_SLEEP_SEC 10 // スリープ時間帯
+#define TIME_SLEEP_SEC 30 // スリープ時間帯
 
 Preferences preferences;
 uint32_t tStart;
@@ -74,6 +74,7 @@ void draw(bool notify = false) {
 
   // バッテリーが空の時はシャットダウン
   if (!batteryEnough) {
+    delay(2000);
     M5.shutdown();
   }
 }
@@ -166,7 +167,7 @@ void setup() {
   }
   myBle = new ble(&preferences, notify);
 
-  updateDisplay(false, notify);
+  updateDisplay(isEmpty(), notify);
 
   tStart = millis();
 }

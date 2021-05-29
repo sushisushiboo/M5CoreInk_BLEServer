@@ -10,6 +10,24 @@
 #define BATTERY_VOLTAGE_MAX 4.2 // カタログ値は3.7V
 #define BATTERY_VOLTAGE_MIN 3.2
 
+float getVoltage() {
+  analogSetPinAttenuation(35,ADC_11db);
+  esp_adc_cal_characteristics_t *adc_chars = (esp_adc_cal_characteristics_t *)calloc(1, sizeof(esp_adc_cal_characteristics_t));
+  esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN_DB_11, ADC_WIDTH_BIT_12, 3600, adc_chars);
+  uint16_t ADCValue = analogRead(35);
+    
+  uint32_t BatVolmV  = esp_adc_cal_raw_to_voltage(ADCValue,adc_chars);
+  return float(BatVolmV) * 25.1 / 5.1 / 1000;  
+}
+
+float getRate(float voltage){
+  return (voltage - BATTERY_VOLTAGE_MIN) / (BATTERY_VOLTAGE_MAX - BATTERY_VOLTAGE_MIN) * 100;
+}
+
+bool isEmpty() {
+  return (getRate(getVoltage()) <= 0.0);
+}
+
 /**
  * バッテリー状態の取得
  * @param [out] voltage: 電圧
@@ -17,20 +35,9 @@
  * @return : バッテリー状態(true: OK, false: 空）
  */
 bool getBattery(float* voltage, float* rate) {
-    analogSetPinAttenuation(35,ADC_11db);
-    esp_adc_cal_characteristics_t *adc_chars = (esp_adc_cal_characteristics_t *)calloc(1, sizeof(esp_adc_cal_characteristics_t));
-    esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN_DB_11, ADC_WIDTH_BIT_12, 3600, adc_chars);
-    uint16_t ADCValue = analogRead(35);
-    
-    uint32_t BatVolmV  = esp_adc_cal_raw_to_voltage(ADCValue,adc_chars);
-    *voltage = float(BatVolmV) * 25.1 / 5.1 / 1000;
-    *rate = (*voltage - BATTERY_VOLTAGE_MIN) / (BATTERY_VOLTAGE_MAX - BATTERY_VOLTAGE_MIN) * 100;
-
-    if (*rate <= 0.0) {
-      return false;
-    }
-
-    return true;
+  *voltage = getVoltage();
+  *rate = getRate(*voltage);
+  return (*rate > 0.0); 
 }
 
 /**
