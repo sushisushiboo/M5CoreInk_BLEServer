@@ -69,6 +69,10 @@ void draw(bool notify = false) {
   printEfont(&inkSprite, (char*)preferences.getString("message").c_str(), 0, 50, 2);
   // メッセージ日時
   inkSprite.drawString(0, 180, preferences.getString("time").c_str());
+
+  if (!batteryEnough) {
+    printEfont(&inkSprite, "  [充電して]  ", 0, 100, 2);
+  }
   
   inkSprite.pushSprite();
 
