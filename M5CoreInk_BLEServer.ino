@@ -11,8 +11,8 @@
 #include "battery.h"
 #include "ntp.h"
 
-#define TIME_ACTIVE_MSEC 1 * 1000 // 動作時間
-#define TIME_ACTIVE_NOTIFY_MSEC 60 * 1000 // 通知時の動作時間
+#define TIME_ACTIVE_MSEC 1 * 1000 // 動作時間(1秒)
+#define TIME_ACTIVE_NOTIFY_MSEC 60 * 1000 // 通知時の動作時間(1分)
 #define TIME_SLEEP_SEC 30 // スリープ時間帯
 
 Preferences preferences;
@@ -61,6 +61,9 @@ void draw(bool notify = false) {
     inkSprite.drawString(180, 0, "!!");
   }
   preferences.putBool("notify", notify);
+  if (notify) {
+    printEfont(&inkSprite, "  [ノック]  ", 0, 150, 2);
+  }
   // バッテリー
   bool batteryEnough =getBatteryStatus(buffer, sizeof(buffer), preferences.getBool("usbConnected"));
   preferences.putString("battery", buffer);
@@ -71,7 +74,7 @@ void draw(bool notify = false) {
   inkSprite.drawString(0, 180, preferences.getString("time").c_str());
 
   if (!batteryEnough) {
-    printEfont(&inkSprite, "  [充電して]  ", 0, 100, 2);
+    printEfont(&inkSprite, "  [充電して]  ", 0, 150, 2);
   }
   
   inkSprite.pushSprite();
@@ -99,7 +102,7 @@ void updateDisplay(bool force = false, bool notify = false) {
     force = true; // 更新する
   }
   // NOTIFY表示の確認
-  if (preferences.getBool("notify") != notify) {
+   if (preferences.getBool("notify") != notify) {
     force = true; // 
   }
   if (force || (hoursPast != hoursCurrent) || notify) {
@@ -194,12 +197,18 @@ void loop() {
       timeActive = TIME_ACTIVE_NOTIFY_MSEC;
     }
     if (timeActive <= (millis() - tStart)) {
+      // 動作時間終了
       tStart = millis();
       if (usbConnected) {
         updateDisplay(true, notify);
       } else {
         if (!M5.BtnPWR.isPressed()) {
-          powerDown();          
+          if (notify) {
+            // 通知中ならば1秒後に再起動して画面更新
+            powerDown(1);
+          } else {
+            powerDown();            
+          }
         }
       }
     }    
